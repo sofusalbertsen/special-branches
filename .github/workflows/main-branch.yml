@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  BRANCH_NAME: main
+  BRANCH_NAME: candidate
 
 jobs:
   build:
