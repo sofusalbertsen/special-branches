@@ -1,12 +1,10 @@
 name: Main Branch Workflow
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+
+env:
+  BRANCH_NAME: main
 
 jobs:
   build:
@@ -22,5 +20,4 @@ jobs:
       
       - name: Display branch information
         run: |
-          echo "Running on branch: $BRANCH_NAME"
-          echo "Current branch: ${{ github.ref_name }}"
+          echo "Running with env BRANCH_NAME: $BRANCH_NAME"
