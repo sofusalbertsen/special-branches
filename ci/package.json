@@ -1,0 +1,14 @@
+{
+  "name": "workflow-checker",
+  "version": "1.0.0",
+  "description": "TypeScript workflow validation for GitHub Actions",
+  "scripts": {
+    "build": "tsc",
+    "check": "ts-node workflow-checker.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "typescript": "^5.9.3",
+    "ts-node": "^10.9.2"
+  }
+}

@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      BRANCH_NAME: main
     
     steps:
       - name: Checkout code
