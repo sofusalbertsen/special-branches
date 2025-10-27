@@ -65,10 +65,10 @@ jobs:
 You can test the validation logic locally before creating a PR:
 
 ```bash
-# Navigate to repository root
-cd /path/to/repository
+# Navigate to repository root (if not already there)
+# cd /path/to/your/repository
 
-# Run the validation check
+# Run the validation check from repository root
 bash -c '
   WORKFLOW_FILES=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \))
   FOUND_CANDIDATE=false
