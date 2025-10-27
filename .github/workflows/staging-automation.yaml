@@ -48,7 +48,7 @@ jobs:
       - name: Make the file change and commit ✍️
         run: |
           # change every instance of "candidate" to "main" in the specified file
-          FILE_TO_CHANGE=".github/workflows/main-branch.yaml"
+          FILE_TO_CHANGE=".github/workflows/main-branch.yml"
           sed -i 's/candidate/main/g' $FILE_TO_CHANGE
 
           # Add and commit the changes
