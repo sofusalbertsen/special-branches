@@ -66,7 +66,7 @@ You can test the validation logic locally before creating a PR:
 
 ```bash
 # Navigate to repository root
-cd .github/workflows
+cd /path/to/repository
 
 # Run the validation check
 bash -c '
