@@ -67,20 +67,5 @@ jobs:
           git push origin ${{ steps.branch_names.outputs.staging_branch }}
 
       - name: Create Pull Request to main 🔗
-        uses: repo-sync/pull-request@v2
-        with:
-          source_branch: ${{ steps.branch_names.outputs.staging_branch }}
-          destination_branch: main # Change 'main' to 'master' if needed
-          pr_title: "[Automated] Promote ${{ github.ref_name }} to main"
-          pr_body: |
-            This PR was automatically created by the GitHub Actions workflow.
-            
-            **Source commit:** `${{ github.sha }}`
-            **Source branch:** `${{ github.ref_name }}`
-            
-            Please review and merge into `main`.
-          pr_label: |
-            staging, automated-pr
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Set 'pr_draft: true' if you want the PR to be a draft initially
-          # pr_draft: true
+        run: gh pr create --label "staging" --label "automated" --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
+        
