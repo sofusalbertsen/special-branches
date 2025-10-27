@@ -15,5 +15,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: ci
+        run: npm install
+      
       - name: Check for 'candidate' string in main branch workflow files
-        run: bash ci/workflow-checker.sh
+        run: npx ts-node ci/workflow-checker.ts

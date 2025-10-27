@@ -5,25 +5,25 @@ This repository uses branch-specific GitHub Actions workflows to manage builds f
 ## Workflow Files
 
 ### 1. Main Branch Workflow (`main-branch.yml`)
-- **Triggers**: On push or pull request to the `main` branch
-- **Environment Variable**: `BRANCH_NAME=main`
+
+- **Triggers**: On workflow_dispatch (manual trigger)
+- **Environment Variables**:
+  - Global: `BRANCH_NAME=candidate`
+  - Job-level: `BRANCH_NAME=main` (overrides global)
 - **Purpose**: Executes build and deployment tasks for the main branch
 
-### 2. Candidate Branch Workflow (`candidate-branch.yml`)
-- **Triggers**: On push or pull request to the `candidate` branch
-- **Environment Variable**: `BRANCH_NAME=candidate`
-- **Purpose**: Executes build and deployment tasks for the candidate branch
+### 2. PR Validation Workflow (`pr-validation.yml`)
 
-### 3. PR Validation Workflow (`pr-validation.yml`)
 - **Triggers**: On pull request to the `main` branch
-- **Purpose**: Validates that workflow files targeting the main branch do not contain references to the candidate branch
+- **Purpose**: Validates that workflow files do not contain references to the `candidate` branch
+- **Implementation**: TypeScript-based validation script (`ci/workflow-checker.ts`)
 - **Validation Rules**:
-  - Checks all workflow files that trigger on the `main` branch
-  - Fails if any such workflow contains `candidate` in:
+  - Checks all workflow files in `.github/workflows/`
+  - Fails if any workflow contains `candidate` in:
     - `BRANCH_NAME` environment variable
     - Branch references in the `branches:` section
+    - Branch list items (`- candidate`)
   - Skips validation for:
-    - `candidate-branch.yml` (candidate-specific workflow)
     - `pr-validation.yml` (this validation workflow itself)
 
 ## Why This Validation?
@@ -33,74 +33,77 @@ The PR validation ensures that workflows running on the `main` branch do not acc
 ## Example Usage
 
 ### Valid Main Branch Workflow
+
 ```yaml
 name: Main Branch Workflow
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+env:
+  BRANCH_NAME: main  # ✓ Correct
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      BRANCH_NAME: main  # ✓ Correct
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 ```
 
 ### Invalid Main Branch Workflow (Will Fail PR Validation)
+
 ```yaml
 name: Main Branch Workflow
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+env:
+  BRANCH_NAME: candidate  # ✗ This will fail validation!
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      BRANCH_NAME: candidate  # ✗ This will fail validation!
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 ```
 
 ## Testing Locally
 
 You can test the validation logic locally before creating a PR:
 
-```bash
-# Navigate to repository root (if not already there)
-# cd /path/to/your/repository
+### Using TypeScript (Recommended)
 
-# Run the validation check from repository root
-bash -c '
-  WORKFLOW_FILES=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \))
-  FOUND_CANDIDATE=false
-  for file in $WORKFLOW_FILES; do
-    # Skip the candidate-branch specific workflow and this validation workflow
-    if [[ "$file" == *"candidate-branch.yml"* ]] || [[ "$file" == *"candidate-branch.yaml"* ]] || [[ "$file" == *"pr-validation.yml"* ]] || [[ "$file" == *"pr-validation.yaml"* ]]; then
-      echo "Skipping: $file"
-      continue
-    fi
-    
-    echo "Checking: $file"
-    # Check if this workflow triggers on main branch
-    if grep -q "branches:" "$file" && grep -A5 "branches:" "$file" | grep -q "main"; then
-      echo "  -> This workflow triggers on main branch"
-      # Check for candidate in BRANCH_NAME or branch references
-      if grep -E "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"; then
-        echo "ERROR: Found candidate branch reference in $file (which triggers on main branch)"
-        echo "Content containing candidate:"
-        grep -nE "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"
-        FOUND_CANDIDATE=true
-      else
-        echo "  -> No candidate branch reference found"
-      fi
-    fi
-  done
-  
-  if [ "$FOUND_CANDIDATE" = true ]; then
-    echo ""
-    echo "❌ VALIDATION FAILED: Workflow files triggering on main branch must not contain candidate branch references"
-    exit 1
-  else
-    echo "✅ VALIDATION PASSED: No candidate branch references found in main branch workflow files"
-  fi
-'
+```bash
+# Navigate to repository root
+cd /path/to/your/repository
+
+# Install dependencies (first time only)
+cd ci
+npm install
+cd ..
+
+# Run the TypeScript validation
+npx ts-node ci/workflow-checker.ts
 ```
+
+### Using Bash
+
+```bash
+# Navigate to repository root
+cd /path/to/your/repository
+
+# Run the bash validation script
+bash ci/workflow-checker.sh
+```
+
+## Validation Scripts
+
+The repository includes two validation script implementations in the `ci/` directory:
+
+1. **`workflow-checker.ts`** (TypeScript) - Primary implementation used in CI/CD
+   - Type-safe with modern Node.js features
+   - Better error messages and maintainability
+   - Requires Node.js and npm
+
+2. **`workflow-checker.sh`** (Bash) - Legacy implementation
+   - Works in environments without Node.js
+   - Uses standard Unix tools (grep, awk, find)
+
+See `ci/README.md` for detailed documentation on both implementations.
