@@ -64,7 +64,7 @@ jobs:
         # for creating branches and pushing. We'll use the default token with the 
         # PAT fallback for cross-repository or advanced scenarios.
         run: |
-          git push origin ${{ steps.branch_names.outputs.staging_branch }}
+          git push --force-with-lease origin ${{ steps.branch_names.outputs.staging_branch }}
 
       - name: Create Pull Request to main 🔗
         run: gh pr create --label "staging" --label "automated" --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
