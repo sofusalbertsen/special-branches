@@ -54,9 +54,6 @@ jobs:
           # Add and commit the changes
           git add $FILE_TO_CHANGE
           git commit -m "🤖 Chore: Update for staging preparation"
-          
-          # Optional: Verify the commit
-          git log -1 --pretty=oneline
 
       - name: Push new branch and commit to GitHub 🚀
         # This step requires a Personal Access Token (PAT) with 'repo' scope 
