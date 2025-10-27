@@ -68,4 +68,6 @@ jobs:
 
       - name: Create Pull Request to main 🔗
         run: gh pr create --label "staging" --label "automated" --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
