@@ -70,17 +70,37 @@ cd .github/workflows
 
 # Run the validation check
 bash -c '
-  WORKFLOW_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \))
+  WORKFLOW_FILES=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \))
+  FOUND_CANDIDATE=false
   for file in $WORKFLOW_FILES; do
-    if [[ "$file" != *"candidate-branch"* ]] && [[ "$file" != *"pr-validation"* ]]; then
-      if grep -q "branches:" "$file" && grep -A5 "branches:" "$file" | grep -q "main"; then
-        if grep -E "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"; then
-          echo "ERROR: Found candidate reference in $file"
-          exit 1
-        fi
+    # Skip the candidate-branch specific workflow and this validation workflow
+    if [[ "$file" == *"candidate-branch.yml"* ]] || [[ "$file" == *"candidate-branch.yaml"* ]] || [[ "$file" == *"pr-validation.yml"* ]] || [[ "$file" == *"pr-validation.yaml"* ]]; then
+      echo "Skipping: $file"
+      continue
+    fi
+    
+    echo "Checking: $file"
+    # Check if this workflow triggers on main branch
+    if grep -q "branches:" "$file" && grep -A5 "branches:" "$file" | grep -q "main"; then
+      echo "  -> This workflow triggers on main branch"
+      # Check for candidate in BRANCH_NAME or branch references
+      if grep -E "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"; then
+        echo "ERROR: Found candidate branch reference in $file (which triggers on main branch)"
+        echo "Content containing candidate:"
+        grep -nE "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"
+        FOUND_CANDIDATE=true
+      else
+        echo "  -> No candidate branch reference found"
       fi
     fi
   done
-  echo "✓ Validation passed"
+  
+  if [ "$FOUND_CANDIDATE" = true ]; then
+    echo ""
+    echo "❌ VALIDATION FAILED: Workflow files triggering on main branch must not contain candidate branch references"
+    exit 1
+  else
+    echo "✅ VALIDATION PASSED: No candidate branch references found in main branch workflow files"
+  fi
 '
 ```
