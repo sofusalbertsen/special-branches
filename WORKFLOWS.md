@@ -1,0 +1,106 @@
+# GitHub Workflows Documentation
+
+This repository uses branch-specific GitHub Actions workflows to manage builds for the `main` and `candidate` branches.
+
+## Workflow Files
+
+### 1. Main Branch Workflow (`main-branch.yml`)
+- **Triggers**: On push or pull request to the `main` branch
+- **Environment Variable**: `BRANCH_NAME=main`
+- **Purpose**: Executes build and deployment tasks for the main branch
+
+### 2. Candidate Branch Workflow (`candidate-branch.yml`)
+- **Triggers**: On push or pull request to the `candidate` branch
+- **Environment Variable**: `BRANCH_NAME=candidate`
+- **Purpose**: Executes build and deployment tasks for the candidate branch
+
+### 3. PR Validation Workflow (`pr-validation.yml`)
+- **Triggers**: On pull request to the `main` branch
+- **Purpose**: Validates that workflow files targeting the main branch do not contain references to the candidate branch
+- **Validation Rules**:
+  - Checks all workflow files that trigger on the `main` branch
+  - Fails if any such workflow contains `candidate` in:
+    - `BRANCH_NAME` environment variable
+    - Branch references in the `branches:` section
+  - Skips validation for:
+    - `candidate-branch.yml` (candidate-specific workflow)
+    - `pr-validation.yml` (this validation workflow itself)
+
+## Why This Validation?
+
+The PR validation ensures that workflows running on the `main` branch do not accidentally reference the `candidate` branch. This helps maintain clean separation between branch-specific configurations and prevents configuration mistakes.
+
+## Example Usage
+
+### Valid Main Branch Workflow
+```yaml
+name: Main Branch Workflow
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: main  # ✓ Correct
+```
+
+### Invalid Main Branch Workflow (Will Fail PR Validation)
+```yaml
+name: Main Branch Workflow
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: candidate  # ✗ This will fail validation!
+```
+
+## Testing Locally
+
+You can test the validation logic locally before creating a PR:
+
+```bash
+# Navigate to repository root (if not already there)
+# cd /path/to/your/repository
+
+# Run the validation check from repository root
+bash -c '
+  WORKFLOW_FILES=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \))
+  FOUND_CANDIDATE=false
+  for file in $WORKFLOW_FILES; do
+    # Skip the candidate-branch specific workflow and this validation workflow
+    if [[ "$file" == *"candidate-branch.yml"* ]] || [[ "$file" == *"candidate-branch.yaml"* ]] || [[ "$file" == *"pr-validation.yml"* ]] || [[ "$file" == *"pr-validation.yaml"* ]]; then
+      echo "Skipping: $file"
+      continue
+    fi
+    
+    echo "Checking: $file"
+    # Check if this workflow triggers on main branch
+    if grep -q "branches:" "$file" && grep -A5 "branches:" "$file" | grep -q "main"; then
+      echo "  -> This workflow triggers on main branch"
+      # Check for candidate in BRANCH_NAME or branch references
+      if grep -E "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"; then
+        echo "ERROR: Found candidate branch reference in $file (which triggers on main branch)"
+        echo "Content containing candidate:"
+        grep -nE "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"
+        FOUND_CANDIDATE=true
+      else
+        echo "  -> No candidate branch reference found"
+      fi
+    fi
+  done
+  
+  if [ "$FOUND_CANDIDATE" = true ]; then
+    echo ""
+    echo "❌ VALIDATION FAILED: Workflow files triggering on main branch must not contain candidate branch references"
+    exit 1
+  else
+    echo "✅ VALIDATION PASSED: No candidate branch references found in main branch workflow files"
+  fi
+'
+```
