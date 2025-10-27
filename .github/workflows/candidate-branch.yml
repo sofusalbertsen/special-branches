@@ -1,0 +1,24 @@
+name: Candidate Branch Workflow
+
+on:
+  push:
+    branches:
+      - candidate
+  pull_request:
+    branches:
+      - candidate
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: candidate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Display branch information
+        run: |
+          echo "Running on branch: $BRANCH_NAME"
+          echo "Current branch: ${{ github.ref_name }}"

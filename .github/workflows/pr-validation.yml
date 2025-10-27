@@ -1,0 +1,54 @@
+name: PR Validation for Main Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for 'candidate' string in main branch workflow files
+        run: |
+          echo "Checking workflow files that trigger on 'main' branch..."
+          
+          # Find all workflow files
+          WORKFLOW_FILES=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \))
+          
+          # Check workflow files that trigger on main branch
+          FOUND_CANDIDATE=false
+          for file in $WORKFLOW_FILES; do
+            # Skip the candidate-branch specific workflow and this validation workflow
+            if [[ "$file" == *"candidate-branch.yml"* ]] || [[ "$file" == *"candidate-branch.yaml"* ]] || [[ "$file" == *"pr-validation.yml"* ]] || [[ "$file" == *"pr-validation.yaml"* ]]; then
+              echo "Skipping: $file"
+              continue
+            fi
+            
+            echo "Checking: $file"
+            # Check if this workflow triggers on main branch
+            if grep -q "branches:" "$file" && grep -A5 "branches:" "$file" | grep -q "main"; then
+              echo "  -> This workflow triggers on main branch"
+              # Check for 'candidate' in BRANCH_NAME or branch references
+              if grep -E "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"; then
+                echo "ERROR: Found 'candidate' branch reference in $file (which triggers on main branch)"
+                echo "Content containing 'candidate':"
+                grep -nE "(BRANCH_NAME.*candidate|branches:.*candidate|- candidate)" "$file"
+                FOUND_CANDIDATE=true
+              else
+                echo "  -> No 'candidate' branch reference found"
+              fi
+            fi
+          done
+          
+          if [ "$FOUND_CANDIDATE" = true ]; then
+            echo ""
+            echo "❌ VALIDATION FAILED: Workflow files triggering on 'main' branch must not contain 'candidate' branch references"
+            exit 1
+          else
+            echo "✅ VALIDATION PASSED: No 'candidate' branch references found in main branch workflow files"
+          fi

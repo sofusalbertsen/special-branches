@@ -1,0 +1,24 @@
+name: Main Branch Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: main
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Display branch information
+        run: |
+          echo "Running on branch: $BRANCH_NAME"
+          echo "Current branch: ${{ github.ref_name }}"
