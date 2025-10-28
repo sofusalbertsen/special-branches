@@ -63,8 +63,16 @@ jobs:
         run: |
           git push --force-with-lease origin ${{ steps.branch_names.outputs.staging_branch }}
 
+      - name: delete existing Pull Requests 🔥
+        run: |
+          EXISTING_PRS=$(gh pr list --label "automated" --json number --jq '.[].number')
+          for PR_NUMBER in $EXISTING_PRS; do
+            gh pr close $PR_NUMBER
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Pull Request to main 🔗
-        run: gh pr create --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
+        run: gh pr create --label "automated" --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
