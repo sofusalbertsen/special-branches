@@ -39,7 +39,7 @@ function findWorkflowFiles(dir: string): string[] {
 function findCandidateReferences(content: string): string[] {
   const matches: string[] = [];
   const lines = content.split('\n');
-  const pattern = /BRANCH_NAME\s*:\s*candidate|branches:.*candidate|-\s*candidate/;
+  const pattern = /SDLC_BRANCH\s*:\s*candidate|branches:.*candidate|-\s*candidate/;
   
   for (let i = 0; i < lines.length; i++) {
     if (pattern.test(lines[i])) {

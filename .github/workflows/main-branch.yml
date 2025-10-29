@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  BRANCH_NAME: candidate
+  SDLC_BRANCH: candidate
 
 jobs:
   build:
@@ -18,4 +18,4 @@ jobs:
       
       - name: Display branch information
         run: |
-          echo "Running with env BRANCH_NAME: $BRANCH_NAME"
+          echo "Running with env SDLC_BRANCH: $SDLC_BRANCH"
