@@ -1,0 +1,78 @@
+name: Prepare Staging and Create PR
+
+on:
+  push:
+    branches:
+      - candidate
+permissions:
+  contents: write # Required to create branches and push commits
+  pull-requests: write # Required to create pull requests
+
+jobs:
+  prepare_staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code ⬇️
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for proper git operations
+          fetch-depth: 0 
+
+      - name: Configure Git User ⚙️
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Define branch names 🏷️
+        id: branch_names
+        run: |
+          echo "staging_branch=staging" >> $GITHUB_OUTPUT
+          # Optional: Add a timestamp/date for unique branch names if 'staging' might exist and you want to avoid overwriting/conflicts
+          # echo "staging_branch=staging-$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create and switch to staging branch 🌳
+        id: create_branch
+        run: |
+          # Use the defined branch name
+          STAGING_BRANCH=${{ steps.branch_names.outputs.staging_branch }}
+          
+          # Check if the staging branch already exists locally and delete it to ensure a fresh start from 'candidate'
+          if git rev-parse --verify $STAGING_BRANCH >/dev/null 2>&1; then
+            echo "Branch $STAGING_BRANCH exists locally. Deleting and recreating."
+            git branch -D $STAGING_BRANCH
+          fi
+          
+          # Create and switch to the new branch based on the current commit (from 'candidate')
+          git checkout -b $STAGING_BRANCH
+
+      - name: Make the file change and commit ✍️
+        run: |
+          # change every instance of "candidate" to "main" in the specified file
+          FILE_TO_CHANGE=".github/workflows/main-branch.yml"
+          sed -i 's/candidate/main/g' $FILE_TO_CHANGE
+
+          # Add and commit the changes
+          git add $FILE_TO_CHANGE
+          git commit -m "🤖 Chore: Update for staging preparation"
+
+      - name: Push new branch and commit to GitHub 🚀
+        # This step requires a Personal Access Token (PAT) with 'repo' scope 
+        # or the built-in GITHUB_TOKEN if the repository is configured to allow it 
+        # for creating branches and pushing. We'll use the default token with the 
+        # PAT fallback for cross-repository or advanced scenarios.
+        run: |
+          git push --force-with-lease origin ${{ steps.branch_names.outputs.staging_branch }}
+
+      - name: delete existing Pull Requests 🔥
+        run: |
+          EXISTING_PRS=$(gh pr list --label "automated" --json number --jq '.[].number')
+          for PR_NUMBER in $EXISTING_PRS; do
+            gh pr close $PR_NUMBER
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Pull Request to main 🔗
+        run: gh pr create --label "automated" --title "[Automated] Promote ${{ github.ref_name }} to main" --body "This PR was automatically created by the GitHub Actions workflow." --base main --head ${{ steps.branch_names.outputs.staging_branch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
