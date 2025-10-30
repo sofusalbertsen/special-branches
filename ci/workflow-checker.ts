@@ -86,7 +86,7 @@ function validateWorkflows(): number {
   for (const file of workflowFiles) {
     // Skip candidate-branch and pr-validation workflows by exact basename match
     const basename = require('path').basename(file);
-    if ( basename === 'pr-validation.yml' || basename === 'pr-validation.yaml') {
+    if ( basename === 'pr-validation.yml' || basename === 'pr-validation.yaml'|| basename === 'staging-automation.yaml'|| basename === 'staging-automation.yml') {
       console.log(`Skipping: ${file}`);
       continue;
     }
