@@ -39,7 +39,7 @@ function findWorkflowFiles(dir: string): string[] {
 function findCandidateReferences(content: string): string[] {
   const matches: string[] = [];
   const lines = content.split('\n');
-  const pattern = /SDLC_BRANCH\s*:\s*candidate|branches:.*candidate|-\s*candidate/;
+  const pattern = /SDLC_BRANCH\s*:\s*candidate|branches:.*candidate|-\s*candidate|uses:\s*j708-zp9u\/\S+@candidate/;
   
   for (let i = 0; i < lines.length; i++) {
     if (pattern.test(lines[i])) {
@@ -81,11 +81,11 @@ function validateWorkflows(): number {
     const matches = findCandidateReferences(content);
     
     if (matches.length > 0) {
-      console.log(`ERROR: Found 'candidate' branch reference in ${file} (which targets the main branch)`);
+      console.log(`ERROR: Found 'candidate' reference in ${file} (which targets the main branch)`);
       matches.forEach(match => console.log(match));
       validationResults.push({ file, matches });
     } else {
-      console.log("  -> No 'candidate' branch reference found");
+      console.log("  -> No 'candidate' reference found");
     }
   }
   
