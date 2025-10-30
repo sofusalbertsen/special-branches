@@ -1,10 +1,27 @@
 #!/usr/bin/env node
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
 interface ValidationResult {
   file: string;
   matches: string[];
+}
+
+/**
+ * Checks if running in GitHub Actions environment
+ */
+function isGitHubActions(): boolean {
+  return process.env.GITHUB_ACTIONS === 'true';
+}
+
+/**
+ * Writes content to GitHub Actions summary
+ */
+function writeToGitHubSummary(content: string): void {
+  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryFile) {
+    appendFileSync(summaryFile, content + '\n');
+  }
 }
 
 /**
@@ -93,10 +110,42 @@ function validateWorkflows(): number {
   
   if (validationResults.length > 0) {
     console.log("❌ VALIDATION FAILED: Workflow files targeting the 'main' branch must not contain 'candidate' branch references");
+    
+    // Write to GitHub Actions summary if running in CI
+    if (isGitHubActions()) {
+      writeToGitHubSummary('## ❌ Workflow Validation Failed\n');
+      writeToGitHubSummary('Workflow files must not contain `candidate` branch references.\n');
+      writeToGitHubSummary('### Violations Found\n');
+      
+      for (const result of validationResults) {
+        writeToGitHubSummary(`#### \`${result.file}\`\n`);
+        writeToGitHubSummary('```yaml');
+        for (const match of result.matches) {
+          const [lineNum, lineContent] = match.split(':', 2);
+          writeToGitHubSummary(`Line ${lineNum}: ${lineContent.trim()}`);
+        }
+        writeToGitHubSummary('```\n');
+      }
+      
+      writeToGitHubSummary('### Checked Patterns\n');
+      writeToGitHubSummary('The following patterns are not allowed:\n');
+      writeToGitHubSummary('- `SDLC_BRANCH: candidate` - Environment variable assignments');
+      writeToGitHubSummary('- `branches: ... candidate` - Branch trigger configurations');
+      writeToGitHubSummary('- `- candidate` - YAML list items (branch arrays)');
+      writeToGitHubSummary('- `uses: j708-zp9u/*@candidate` - Custom action references using candidate branch');
+    }
+    
     return 1;
   }
   
   console.log("✅ VALIDATION PASSED: No 'candidate' branch references found in main branch workflow files");
+  
+  // Write success to GitHub Actions summary if running in CI
+  if (isGitHubActions()) {
+    writeToGitHubSummary('## ✅ Workflow Validation Passed\n');
+    writeToGitHubSummary(`All ${workflowFiles.length} workflow files are clean. No \`candidate\` branch references found.`);
+  }
+  
   return 0;
 }
 
